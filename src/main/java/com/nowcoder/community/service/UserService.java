@@ -18,6 +18,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+
 @Service
 public class UserService implements CommunityConstant {
     @Autowired
@@ -32,110 +33,123 @@ public class UserService implements CommunityConstant {
     private String domain;
     @Value("${server.servlet.context-path}")
     private String contextPath;
-    public User findUserId(int id){
+
+    public User findUserId(int id) {
         return userMapper.selectById(id);
     }
-    public Map<String,Object> register(User user){
-        Map<String,Object> map=new HashMap<>();
-        if(user==null){
+
+    public Map<String, Object> register(User user) {
+        Map<String, Object> map = new HashMap<>();
+        if (user == null) {
             throw new IllegalArgumentException("参数不能为空！");
         }
-        if(StringUtils.isBlank(user.getUsername())){
+        if (StringUtils.isBlank(user.getUsername())) {
             map.put("usernameMsg", "账号不能为空!");
             return map;
         }
-        if(StringUtils.isBlank(user.getPassword())){
+        if (StringUtils.isBlank(user.getPassword())) {
             map.put("passwordMsg", "密码不能为空!");
             return map;
         }
-        if(StringUtils.isBlank(user.getEmail())){
+        if (StringUtils.isBlank(user.getEmail())) {
             map.put("emailMsg", "邮箱不能为空!");
             return map;
         }
         //验证账号
-        User u1=userMapper.selectByName(user.getUsername());
-        if(u1!=null){
+        User u1 = userMapper.selectByName(user.getUsername());
+        if (u1 != null) {
             map.put("usernameMsg", "该账号已存在!");
             return map;
         }
 //        验证邮箱
-        User u2=userMapper.selectByEmail(user.getEmail());
-        if(u2!=null){
+        User u2 = userMapper.selectByEmail(user.getEmail());
+        if (u2 != null) {
             map.put("emailMsg", "该邮箱已被注册!");
             return map;
         }
 //注册用户
-        user.setSalt(CommunityUtil.generateUUID().substring(0,5));
-        user.setPassword(CommunityUtil.md5(user.getPassword()+user.getSalt()));
+        user.setSalt(CommunityUtil.generateUUID().substring(0, 5));
+        user.setPassword(CommunityUtil.md5(user.getPassword() + user.getSalt()));
         user.setType(0);
         user.setStatus(0);
         user.setActivationCode(CommunityUtil.generateUUID());
-        user.setHeaderUrl(String.format("http://images.nowcoder.com/head/%dt.png",new Random().nextInt(1000)));
+        user.setHeaderUrl(String.format("http://images.nowcoder.com/head/%dt.png", new Random().nextInt(1000)));
         user.setCreateTime(new Date());
         userMapper.insertUser(user);
 //激活邮件
         Context context = new Context();
-        context.setVariable("email",user.getEmail());
-        String url=domain+contextPath+"/activation/"+user.getId()+"/"+user.getActivationCode();
-        context.setVariable("url",url);
+        context.setVariable("email", user.getEmail());
+        String url = domain + contextPath + "/activation/" + user.getId() + "/" + user.getActivationCode();
+        context.setVariable("url", url);
 //        使用thymeleaf模版来生产html文件。
 //        Context是给thymeleaf模版提供变量的。
-        String content=templateEngine.process("/mail/activation",context);
-        mailCilent.sendMail(user.getEmail(),"激活账号",content);
+        String content = templateEngine.process("/mail/activation", context);
+        mailCilent.sendMail(user.getEmail(), "激活账号", content);
         return map;
     }
-    public int activation(int userId,String code){
-        User user=userMapper.selectById(userId);
-        if(user.getStatus()==1){
+
+    public int activation(int userId, String code) {
+        User user = userMapper.selectById(userId);
+        if (user.getStatus() == 1) {
             return ACTIVATION_REPEAT;
-        }else if(user.getActivationCode().equals(code)){
-            userMapper.updateStatus(userId,1);
+        } else if (user.getActivationCode().equals(code)) {
+            userMapper.updateStatus(userId, 1);
             return ACTIVATION_SUCCESS;
-        }else{
+        } else {
             return ACTIVATION_FAILURE;
         }
     }
-    public Map<String,Object> login(String username,String password,int expiredSeconds ){
-        Map<String,Object> map=new HashMap<>();
-        if(StringUtils.isBlank(username)){
+
+    public Map<String, Object> login(String username, String password, int expiredSeconds) {
+        Map<String, Object> map = new HashMap<>();
+        if (StringUtils.isBlank(username)) {
             map.put("usernameMsg", "账号不能为空!");
             return map;
         }
-        if(StringUtils.isBlank(password)){
+        if (StringUtils.isBlank(password)) {
             map.put("passwordMsg", "密码不能为空!");
             return map;
         }
-        User user=userMapper.selectByName(username);
-        if(user==null){
+        User user = userMapper.selectByName(username);
+        if (user == null) {
             map.put("usernameMsg", "该账号不存在!");
             return map;
         }
-        if(user.getStatus()==0){
+        if (user.getStatus() == 0) {
             map.put("usernameMsg", "该账号未激活!");
             return map;
         }
-        password=CommunityUtil.md5(password+user.getSalt());
-        if(!user.getPassword().equals(password)){
+        password = CommunityUtil.md5(password + user.getSalt());
+        if (!user.getPassword().equals(password)) {
             map.put("passwordMsg", "密码不正确!");
             return map;
         }
-        LoginTicket loginTicket=new LoginTicket();
+        LoginTicket loginTicket = new LoginTicket();
         loginTicket.setUserId(user.getId());
         loginTicket.setTicket(CommunityUtil.generateUUID());
         loginTicket.setStatus(0);
-        loginTicket.setExpired(new Date(System.currentTimeMillis()+expiredSeconds*1000));
+        loginTicket.setExpired(new Date(System.currentTimeMillis() + expiredSeconds * 1000));
         loginTicketMapper.insertLoginTicket(loginTicket);
-        map.put("ticket",loginTicket.getTicket());
+        map.put("ticket", loginTicket.getTicket());
         return map;
     }
-    public void logout(String ticket){
-        loginTicketMapper.updateStatus(ticket,1);
+
+    public void logout(String ticket) {
+        loginTicketMapper.updateStatus(ticket, 1);
     }
-/*
-* 根据ticket查询LoginTicket
-* */
-    public LoginTicket findLoginTicket(String ticket){
+
+    /*
+     * 根据ticket查询LoginTicket
+     * */
+    public LoginTicket findLoginTicket(String ticket) {
         LoginTicket loginTicket = loginTicketMapper.selectByTicket(ticket);
         return loginTicket;
     }
+    /*
+    * 上传图片
+    */
+    public int updateHeader(int userId,String Header){
+        return userMapper.updateHeader(userId,Header);
+    }
+
 }
