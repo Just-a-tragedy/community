@@ -1,5 +1,6 @@
 package com.nowcoder.community.controller;
 
+import com.nowcoder.community.dao.UserMapper;
 import com.nowcoder.community.entity.User;
 import com.nowcoder.community.service.UserService;
 import com.nowcoder.community.util.CommunityUtil;
@@ -20,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/user")
@@ -88,6 +90,19 @@ public class UserController {
                 }
         } catch (IOException e) {
             logger.error("读取头像失败: ",e.getMessage());
+        }
+    }
+
+    @PostMapping("/updatePassword")
+    public String updatePassword(String oldPassword,String newPassword,Model model){
+        User user = hostHolder.getUser();
+        Map<String, Object> map = userService.updatePassword(oldPassword, newPassword, user.getId());
+        if(map==null || map.isEmpty()){
+            return "redirect:/logout";
+        }else{
+            model.addAttribute("oldPasswordMsg", map.get("oldPasswordMsg"));
+            model.addAttribute("newPasswordMsg", map.get("newPasswordMsg"));
+            return "/site/setting";
         }
     }
 }
