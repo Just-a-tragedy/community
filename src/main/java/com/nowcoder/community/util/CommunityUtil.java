@@ -24,6 +24,13 @@ public class CommunityUtil {
         return DigestUtils.md5DigestAsHex(key.getBytes());
     }
 
+
+    /*
+    * 处理json格式数据，进行前后端交互，异步刷新页面
+    * code:编号
+    * msg:提示信息
+    * map:转换数据
+    * */
     public static String getJSONString(int code, String msg, Map<String,Object> map) {
 //        JSONObject导jar包
         JSONObject json = new JSONObject();
