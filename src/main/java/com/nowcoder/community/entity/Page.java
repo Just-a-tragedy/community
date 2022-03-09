@@ -1,7 +1,7 @@
 package com.nowcoder.community.entity;
 
 import lombok.Data;
-
+@Data
 public class Page {
     //当前页码
     private int current=1;
