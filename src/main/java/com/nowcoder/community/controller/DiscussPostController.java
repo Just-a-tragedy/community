@@ -1,13 +1,12 @@
 package com.nowcoder.community.controller;
 
-import com.nowcoder.community.entity.Comment;
-import com.nowcoder.community.entity.DiscussPost;
-import com.nowcoder.community.entity.Page;
-import com.nowcoder.community.entity.User;
+import com.nowcoder.community.entity.*;
+import com.nowcoder.community.event.EventProducer;
 import com.nowcoder.community.service.CommentService;
 import com.nowcoder.community.service.DiscussPostService;
 import com.nowcoder.community.service.LikeService;
 import com.nowcoder.community.service.UserService;
+import com.nowcoder.community.util.CommunityConstant;
 import com.nowcoder.community.util.CommunityUtil;
 import com.nowcoder.community.util.HostHolder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +21,7 @@ import static com.nowcoder.community.util.CommunityConstant.ENTITY_TYPE_POST;
 
 @Controller
 @RequestMapping("/discuss")
-public class DiscussPostController {
+public class DiscussPostController implements CommunityConstant {
     @Autowired
     private HostHolder hostHolder;
     @Autowired
@@ -37,6 +36,9 @@ public class DiscussPostController {
     @Autowired
     private LikeService likeService;
 
+    @Autowired
+    private EventProducer eventProducer;
+
     @PostMapping("/add")
     @ResponseBody
     public String addDiscussPost(String title,String content){
@@ -50,6 +52,15 @@ public class DiscussPostController {
         post.setUserId(user.getId());
         post.setCreateTime(new Date());
         discussPostService.insertDiscussPosts(post);
+
+        // 触发发帖事件
+        Event event = new Event()
+                .setTopic(TOPIC_PUBLISH)
+                .setUserId(user.getId())
+                .setEntityType(ENTITY_TYPE_POST)
+                .setEntityId(post.getId());
+        eventProducer.fireEvent(event);
+
         return CommunityUtil.getJSONString(0, "发布成功!");
     }
 
